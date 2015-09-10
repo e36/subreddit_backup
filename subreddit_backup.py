@@ -24,6 +24,9 @@ comment_list = []
 # init the 'already done' set
 already_done = set()
 
+# status stuff
+print('Getting thread ' + thread_id)
+
 # get comments and flatten
 thread.replace_more_comments(limit=None, threshold=1)
 # comments = thread.comments
@@ -79,8 +82,12 @@ for comment in flat_comments:
 thread_list['thread_data'] = thread_data
 thread_list['comments'] = comment_list
 
-print(json.dumps(thread_list))
+# create file name from thread data, and save the json dump
+filename = thread_data['author'] + '-' + thread_data['id'] + '.json'
+
+f = open(filename, 'w')
+f.write(json.dumps(thread_list))
+f.close()
+
 print('Done.')
-# sort the list
-# newlist = sorted(comment_list, key=lambda k: k['score'], reverse=True)
 
