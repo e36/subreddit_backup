@@ -1,14 +1,23 @@
 __author__ = 'e36'
-__version__ = '0.5'
-
+__version__ = '0.6'
 
 import praw
 import json
+import argparse
 
+
+# command line arguments!  More functionality can be added later as needed
+parser = argparse.ArgumentParser(description='Backs up subreddit threads')
+parser.add_argument('thread_id', metavar='thread', type=str, help='Unique ID of the thread to be backed up')
+args = parser.parse_args()
+
+# get argument variables - TODO: add error catching to this
+thread_id = args.thread_id
+
+# print intro
 print('***Subreddit Backup***')
+print('version {0}'.format(__version__))
 
-# TODO: Create a new method of inputting post IDs.  I'd like to be able to specify a list of IDs.
-thread_id = '33qfpf'    # we're just going to use this one for now, so I don't have to keep tying it in
 
 # init praw stuff
 r = praw.Reddit(user_agent='backup script by /u/e36')
