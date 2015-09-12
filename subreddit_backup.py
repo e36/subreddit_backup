@@ -1,4 +1,6 @@
 __author__ = 'e36'
+__version__ = '0.5'
+
 
 import praw
 import json
@@ -9,7 +11,7 @@ print('***Subreddit Backup***')
 thread_id = '33qfpf'    # we're just going to use this one for now, so I don't have to keep tying it in
 
 # init praw stuff
-r = praw.Reddit(user_agent='praw test /u/e36')
+r = praw.Reddit(user_agent='backup script by /u/e36')
 
 # get submission
 thread = r.get_submission(submission_id=thread_id)
