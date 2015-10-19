@@ -1,8 +1,5 @@
-__author__ = 'e36'
-
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, func, Float
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.sql.functions import current_timestamp
 
 Base = declarative_base()
 
@@ -24,7 +21,7 @@ class Post(Base):
     name = Column(String, nullable=False)
     title = Column(String, nullable=False)
     author = Column(String, nullable=False)
-    domain = Column(Integer, ForeignKey='Subreddit.id', nullable=False)
+    domain = Column(Integer, ForeignKey('tblSubreddits.id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
     score = Column(Integer, nullable=False)
     comments = Column(Integer, nullable=False)
     link_flair_text = Column(String, nullable=False)
@@ -38,7 +35,7 @@ class Comment(Base):
     __tablename__ = 'tblComments'
 
     id = Column(Integer, primary_key=True)
-    post_id = Column(Integer, ForeignKey('Post.id'), nullable=False)
+    post_id = Column(Integer, ForeignKey('tblPosts.id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
     name = Column(String, nullable=False)
     parent_id = Column(String, nullable=False)
     score = Column(Integer, nullable=False)
@@ -53,7 +50,7 @@ class Message(Base):
 
     id = Column(Integer, primary_key=True)
     message = Column(String, nullable=False)
-    created = Column(DateTime, current_timestamp)
+    created = Column(DateTime, nullable=False)
 
 
 class MessageLog(Base):
