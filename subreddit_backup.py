@@ -4,7 +4,7 @@ __version__ = '0.6'
 import praw
 import time
 import configparser
-from database import connect_to_db
+from database import Bot
 import sqlalchemy
 
 # print intro
@@ -18,12 +18,12 @@ DATABASE = config['database']
 SETTINGS = config['settings']
 
 # init praw stuff
-r = praw.Reddit(user_agent='backup script by /u/e36')
+r = praw.Reddit(user_agent='IAmA and Askreddit parsing script by u/e36')
 
-# connect to the database
-db = connect_to_db(DATABASE)
+# create bot, connect to database
+bot = Bot(DATABASE)
 
 # main loop
 while True:
-    print("bot")
-    time.sleep(5)
+    bot.check_messages()
+    time.sleep(int(SETTINGS['sleepinterval']))
