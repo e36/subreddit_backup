@@ -1,87 +1,99 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import update
 from datetime import datetime
-from models_mysql import Subreddit, Post, Comment, Message, MessageLog
+from models_mysql import MessageLog, Message, Post, Subreddit, Comment
 
 
-class Bot:
+def get_message(session):
+    """
+    Gets the next message from tblMessages
+    :param session: sql alchemy session
+    :return: the message or None
+    """
+    print('Checking messages...')
 
-    def __init__(self, databasesettings):
+    # get next message in tblMessages
+    result = session.query(Message).first()
 
-        self.settings = databasesettings
-        print(self.settings['engine'])
+    # return message or None
+    if result:
+        return result
+    else:
+        return None
 
-        # figure out what kind of database engine we're using
-        # TODO: figure out how to support different database engines
 
-        # connect to database engine
-        self.engine = self.connect_to_db()
+def move_message(session, messageid):
+    """
+    Moves a message from tblMessages to tblMessageLog
+    :param session: sql alchemy session
+    :param messageid: the message ID to be moved
+    :return:
+    """
 
-        # create a session
-        self.Session = sessionmaker(bind=self.engine)
-        self.session = self.Session()
+    # move message to tblMessageLog
+    # create db objects
+    oldmessage = session.query(Message).filter_by(id=messageid).one()
+    messagelog = MessageLog(message=oldmessage.message, created=oldmessage.created, executed=datetime.utcnow())
 
-    def connect_to_db(self):
+    # add message to MessageLog table, and delete from Message table
+    session.add(messagelog)
+    session.delete(oldmessage)
 
-        """
-        Connects to a database.
-        :param dbsettings: a configparser dict with all necessary connection information
-        :return: a sqlalchemy.engine object
-        """
+    # commit
+    session.commit()
 
-        # grab database settings
-        dbsettings = self.settings
 
-        # build connection string
-        # engine://user:pass@host/database
-        connection_string = dbsettings['engine'] + "://" + dbsettings['username'] + ":" + dbsettings['password'] + "@" + dbsettings['hostname'] + ":" + dbsettings['port'] + "/" + dbsettings['dbname']
-        print(connection_string)
+def check_subreddit_by_name(session, subreddit):
+    """
+    Checks tblSubreddits to see if the subreddit name exists.  If yes, then return the table ID.  If no, insert into
+    table and return table ID.
+    :param session: sql alchemy session object
+    :param subreddit: subreddit name
+    :return: subreddit ID from tblSubreddits
+    """
 
-        # create engine object
-        engine = create_engine(connection_string)
+    tablentry = session.query(Subreddit).filter_by(name=subreddit)
 
-        return engine
+    if tablentry:
+        return tablentry.id
+    else:
+        # it does not exist in the table, so insert and return the table id
+        domain = 'self.' + subreddit
+        sub = Subreddit(name=subreddit, domain=domain)
+        session.add(sub)
+        session.commit()
+        return sub.id
 
-    def check_messages(self):
-        """
-        Check the messages table
-        :return: nothing?
-        """
 
-        # get next message in tblMessages
-        result = self.session.query(Message).first()
+def check_subreddit_by_domain(session, domain):
+    """
+    Checks tblSubreddits to see if the subreddit domain exists.  If yes, then return the table ID.  If no, insert into
+    table and return the table ID.
+    :param session: sql alchemy session
+    :param domain: PRAW domain (e.g. 'self.IAmA')
+    :return: table ID of the domain
+    """
 
-        # process message
-        if result:
-            execute = datetime.utcnow()
-            print("MESSAGE: " + result.message + " RECEIVED " + str(result.created) + "\n")
-        else:
-            print("No messages\n")
+    tablentry = session.query(Subreddit).filter_by(domain=domain)
 
-        # move message to tblMessageLog
-        if result:
-            message = MessageLog(message=result.message, created=result.created, executed=execute)
-            self.session.add(message)
-            self.session.delete(result)
-            self.session.commit()
+    if tablentry:
+        return tablentry.id
+    else:
+        # it does not exist in the table, so insert and return the table id
+        subname = domain.split(sep='.')
+        sub = Subreddit(name=subname[0], domain=domain)
+        session.add(sub)
+        session.commit()
+        return sub.id
 
-    def process_message(self, message):
-        """
-        Processes a database message
-        :param message: a database message
-        :return: nothing?
-        """
 
-        # the types of messages currently supported
-        message_types = ['GET']
+def insert_post_data(session, post_data):
+    """
+    Inserts post data into tblPosts.  This will insert or update depending on whether the post already exists
+    in the database or not.  It will skip the author if the author deleted the post since the last update.
+    :param session: sql alchemy session
+    :param post_data: dict with all post data
+    :return:
+    """
 
-        # most messages are going to be something like "GET <thread id" so we split it to make it easier to process
-        message_split = message.split()
-
-        # do any of the components match message_types? THIS ASSUMES TWO WORD MESSAGES FOR NOW
-        for element in message_split:
-            if element in message_types:
-                message_command = element
-            else:
-                message_target = element
-
+    #  first check to see if the post already exists in the database
+    post = session.query(Post).filter_by(thread_id=post_data['thread_id']).one()

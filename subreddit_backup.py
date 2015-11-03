@@ -4,8 +4,7 @@ __version__ = '0.6'
 import praw
 import time
 import configparser
-from database import Bot
-import sqlalchemy
+from sessionhandler import SessionHandler
 
 # print intro
 print('***Subreddit Backup Bot***')
@@ -21,9 +20,7 @@ SETTINGS = config['settings']
 r = praw.Reddit(user_agent='IAmA and Askreddit parsing script by u/e36')
 
 # create bot, connect to database
-bot = Bot(DATABASE)
+backend = SessionHandler(DATABASE, SETTINGS)
 
-# main loop
-while True:
-    bot.check_messages()
-    time.sleep(int(SETTINGS['sleepinterval']))
+# start the backend
+backend.start()
