@@ -29,6 +29,8 @@ class Post(Base):
     permalink = Column(String(50), nullable=False)
     selftext = Column(Text, nullable=False)
     selftext_html = Column(Text, nullable=False)
+    lastchecked = Column(DateTime, nullable=False)
+    lastmodified = Column(DateTime, nullable=False)
 
 
 class Comment(Base):
@@ -43,6 +45,8 @@ class Comment(Base):
     author = Column(String(50), nullable=False)
     body = Column(Text, nullable=False)
     body_html = Column(Text, nullable=False)
+    lastchecked = Column(DateTime, nullable=False)
+    lastmodified = Column(DateTime, nullable=False)
 
 
 class Message(Base):
