@@ -27,7 +27,7 @@ class Post(Base):
     num_comments = Column(Integer, nullable=False)
     link_flair_text = Column(String(50), nullable=False)
     upvote_ratio = Column(Integer, nullable=False)
-    permalink = Column(String(50), nullable=False)
+    permalink = Column(String(200), nullable=False)
     selftext = Column(Text, nullable=False)
     selftext_html = Column(Text, nullable=False)
     lastchecked = Column(DateTime, nullable=False)

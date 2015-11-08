@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS `tblposts` (
   `num_comments` int(11) NOT NULL,
   `link_flair_text` varchar(50) NOT NULL,
   `upvote_ratio` int(11) NOT NULL,
-  `permalink` varchar(50) NOT NULL,
+  `permalink` varchar(200) NOT NULL,
   `selftext` text NOT NULL,
   `selftext_html` text NOT NULL,
   `lastchecked` datetime NOT NULL,
