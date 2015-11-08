@@ -4,6 +4,7 @@ import praw
 import OAuth2Util
 from reddit import get_post_data, get_posts
 from database import insert_comment_data, insert_history, insert_post_data
+from datetime import datetime
 
 
 class SessionHandler:
@@ -73,6 +74,12 @@ class SessionHandler:
         for thread in threads:
             # iterate through thread IDs, and grab data
 
+            # empty tblHistory dict
+            history = dict()
+
+            # get created datetime for tblHistory
+            history['created'] = datetime.utcnow()
+
             # make sure oauth tokens are good, since grabbing threads can take a while
             self.o.refresh()
 
@@ -86,12 +93,15 @@ class SessionHandler:
             for comment in retdata['comments']:
                 insert_comment_data(self.Session, comment, post_id)
 
+            # get finished time for tblHistory
+            history['finished'] = datetime.utcnow()
+
             # build tblhistory entry
-            historymessage = 'Fetched post ID {0} with {1} comments'.format(retdata['thread_data']['id'], len(retdata['comments']))
-            print(historymessage)
+            history['ymessage'] = 'Fetched post ID {0} with {1} comments'.format(retdata['thread_data']['id'], len(retdata['comments']))
+            print(history['message'])
 
             # create history message and isnert
-            insert_history(self.Session, historymessage)
+            insert_history(self.Session, history)
 
             # just throw in a line return to space things out
             print('\n')
