@@ -1,8 +1,8 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-import time
-from reddit import get_post_data, get_posts
 import praw
+import OAuth2Util
+from reddit import get_post_data, get_posts
 from database import insert_comment_data, insert_history, insert_post_data
 
 
@@ -24,8 +24,10 @@ class SessionHandler:
         self.Session = sessionmaker(bind=self.engine)
 
         # create praw instance
-        # init praw stuff
-        self.r = praw.Reddit(user_agent='IAmA and Askreddit parsing script by u/e36')
+        # init praw and OAuth2Util things
+        self.r = praw.Reddit(user_agent='Subreddit parsing script by u/e36')
+        self.o = OAuth2Util.OAuth2Util(self.r)
+        self.o.refresh()
 
     def connect_to_db(self):
 
@@ -62,11 +64,17 @@ class SessionHandler:
         :return: nothing
         """
 
+        # refresh oauth tokens
+        self.o.refresh()
+
         threads = []
         threads = get_posts(self.r, self.settings['defaultsubreddit'])
 
         for thread in threads:
             # iterate through thread IDs, and grab data
+
+            # make sure oauth tokens are good, since grabbing threads can take a while
+            self.o.refresh()
 
             # get post data, including comments
             retdata = get_post_data(self.r, thread)
