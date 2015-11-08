@@ -8,7 +8,7 @@ def insert_history(Session, message):
     """
     Inserts a message into tblHistory.
     :param Session: sqlalchemy Session object
-    :param message: text message to be inserted into the table
+    :param message: dict with message, created datetime, finished datetime
     :return: nothing
     """
 
@@ -16,8 +16,9 @@ def insert_history(Session, message):
     session = Session()
 
     newhistory = History(
-        message=message,
-        created=datetime.utcnow()
+        message=message['message'],
+        created=message['created'],
+        finished=message['finished']
     )
 
     # add to session and commit

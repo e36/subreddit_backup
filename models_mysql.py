@@ -72,4 +72,5 @@ class History(Base):
 
     id = Column(Integer, primary_key=True)
     created = Column(DateTime)
+    finished = Column(DateTime)
     message = Column(String(250))
