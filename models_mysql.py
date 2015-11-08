@@ -25,7 +25,7 @@ class Post(Base):
     domain = Column(Integer, ForeignKey('tblSubreddits.id'), nullable=False)
     score = Column(Integer, nullable=False)
     num_comments = Column(Integer, nullable=False)
-    link_flair_text = Column(String(50), nullable=False)
+    link_flair_text = Column(String(50), nullable=True)
     upvote_ratio = Column(Integer, nullable=False)
     permalink = Column(String(200), nullable=False)
     selftext = Column(Text, nullable=False)
