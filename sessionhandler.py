@@ -97,7 +97,7 @@ class SessionHandler:
             history['finished'] = datetime.utcnow()
 
             # build tblhistory entry
-            history['ymessage'] = 'Fetched post ID {0} with {1} comments'.format(retdata['thread_data']['id'], len(retdata['comments']))
+            history['message'] = 'Fetched post ID {0} with {1} comments'.format(retdata['thread_data']['id'], len(retdata['comments']))
             print(history['message'])
 
             # create history message and isnert
