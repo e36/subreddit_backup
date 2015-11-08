@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS `tblcomments` (
 CREATE TABLE IF NOT EXISTS `tblhistory` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `created` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `finished` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   `message` varchar(250) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
@@ -81,7 +82,7 @@ CREATE TABLE IF NOT EXISTS `tblposts` (
   `domain` int(11) NOT NULL,
   `score` int(11) NOT NULL,
   `num_comments` int(11) NOT NULL,
-  `link_flair_text` varchar(50) NOT NULL,
+  `link_flair_text` varchar(50) DEFAULT NULL,
   `upvote_ratio` int(11) NOT NULL,
   `permalink` varchar(200) NOT NULL,
   `selftext` text NOT NULL,
