@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship, backref
 
 Base = declarative_base()
 
@@ -21,9 +22,9 @@ class Post(Base):
     name = Column(String(50), nullable=False)
     title = Column(Text, nullable=False)
     author = Column(String(50), nullable=False)
-    domain = Column(Integer, ForeignKey('tblSubreddits.id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    domain = Column(Integer, ForeignKey('tblSubreddits.id'), nullable=False)
     score = Column(Integer, nullable=False)
-    comments = Column(Integer, nullable=False)
+    num_comments = Column(Integer, nullable=False)
     link_flair_text = Column(String(50), nullable=False)
     upvote_ratio = Column(Integer, nullable=False)
     permalink = Column(String(50), nullable=False)
@@ -37,7 +38,7 @@ class Comment(Base):
     __tablename__ = 'tblComments'
 
     id = Column(Integer, primary_key=True)
-    post_id = Column(Integer, ForeignKey('tblPosts.id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    link_id = Column(Integer, ForeignKey('tblPosts.id'), nullable=False)
     name = Column(String(50), nullable=False)
     parent_id = Column(String(50), nullable=False)
     score = Column(Integer, nullable=False)
@@ -64,3 +65,11 @@ class MessageLog(Base):
     message = Column(String(50), nullable=True)
     created = Column(DateTime, nullable=False)
     executed = Column(DateTime, nullable=False)
+
+
+class History(Base):
+    __tablename__ = 'tblHistory'
+
+    id = Column(Integer, primary_key=True)
+    created = Column(DateTime)
+    message = Column(String(250))

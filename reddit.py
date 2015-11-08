@@ -1,7 +1,7 @@
 import praw
 
 
-def get_everything(reddit_session, thread_id):
+def get_post_data(reddit_session, thread_id):
     """
     Gets all comments and post data from a thread.
     :param thread_id: reddit thread ID
@@ -29,21 +29,10 @@ def get_everything(reddit_session, thread_id):
 
     # get thread info and add to thread_list
     print('Getting thread information.')
-    thread_data = {
-        'created_utc': thread.created_utc,
-        'id': thread.id,
-        'name': thread.name,
-        'author': thread.author.name,
-        'domain': thread.domain,
-        'link_flair_text': thread.link_flair_text,
-        'num_comments': thread.num_comments,
-        'permalink': thread.permalink,
-        'score': thread.score,
-        'selftext': thread.selftext,
-        'selftext_html': thread.selftext_html,
-        'title': thread.title,
-        'upvote_ratio': thread.upvote_ratio,
-    }
+    thread_data = dict(created_utc=thread.created_utc, id=thread.id, name=thread.name, author=thread.author.name,
+                       domain=thread.domain, link_flair_text=thread.link_flair_text, num_comments=thread.num_comments,
+                       permalink=thread.permalink, score=thread.score, selftext=thread.selftext,
+                       selftext_html=thread.selftext_html, title=thread.title, upvote_ratio=thread.upvote_ratio)
 
     # iterate through comments and add them to comment list before adding to thread_list for json serialization
     print('Getting comment data.')
@@ -53,19 +42,12 @@ def get_everything(reddit_session, thread_id):
 
         if comment.id not in already_done:
 
-            comment_dict = {
-                'created_utc': comment.created_utc,
-                'body': comment.body,
-                'body_html': comment.body_html,
-                'id': comment.id,
-                'link_id': comment.link_id,
-                'name': comment.name,
-                'parent_id': comment.parent_id,
-                'score': comment.score,
-            }
+            comment_dict = dict(created_utc=comment.created_utc, body=comment.body, body_html=comment.body_html,
+                                id=comment.id, link_id=comment.link_id, name=comment.name, parent_id=comment.parent_id,
+                                score=comment.score)
 
             # check for author == None for deleted comments
-            if comment.author != None:
+            if comment.author:
                 comment_dict['author'] = comment.author.name
             else:
                 comment_dict['author'] = '[Deleted]'
@@ -96,6 +78,8 @@ def get_posts(reddit_session, subreddit_name):
     :return:
     """
 
+    print("Getting posts.")
+
     # init lists and sets
     thread_data_list = dict()
     thread_data_dict = dict()
@@ -124,6 +108,8 @@ def get_posts(reddit_session, subreddit_name):
                 # add the post object to thread_data_list[post.id]
                 already_done.append(post.id)
                 thread_data_list[post.id] = post
+
+    print("{0} posts found.".format(len(thread_data_list)))
 
     # return
     return thread_data_list

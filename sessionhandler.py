@@ -1,8 +1,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from datetime import datetime
 import time
-import database
+from reddit import get_post_data, get_posts
+import praw
+from database import insert_comment_data, insert_history, insert_post_data
 
 
 class SessionHandler:
@@ -22,6 +23,9 @@ class SessionHandler:
         # create a sql alchemy session
         self.Session = sessionmaker(bind=self.engine)
 
+        # create praw instance
+        # init praw stuff
+        self.r = praw.Reddit(user_agent='IAmA and Askreddit parsing script by u/e36')
 
     def connect_to_db(self):
 
@@ -36,7 +40,7 @@ class SessionHandler:
 
         # build connection string
         # engine://user:pass@host/database
-        connection_string = dbsettings['engine'] + "://" + dbsettings['username'] + ":" + dbsettings['password'] + "@" + dbsettings['hostname'] + ":" + dbsettings['port'] + "/" + dbsettings['dbname']
+        connection_string = dbsettings['engine'] + "://" + dbsettings['username'] + ":" + dbsettings['password'] + "@" + dbsettings['hostname'] + ":" + dbsettings['port'] + "/" + dbsettings['dbname'] + "?charset=utf8"
         print(connection_string)
 
         # create engine object
@@ -50,53 +54,36 @@ class SessionHandler:
         :return: nothing at all
         """
 
-        print("Starting the backend service.")
+        print("Starting the back process.")
+        self.grab_data()
 
-        while True:
-            # this is a never-ending loop
-
-
-            # look for messages
-            self.check_messages()
-
-            # sleep
-            time.sleep(float(self.settings['sleepinterval']))
-
-    def check_messages(self):
+    def grab_data(self):
         """
-        Check the messages table
-        :return: nothing?
+        Gets posts, inserts/updates the database, inserts history entry
+        :return: nothing
         """
 
-        message = database.get_message(self.session)
+        threads = []
+        threads = get_posts(self.r, self.settings['defaultsubreddit'])
 
-        if message:
+        for thread in threads:
+            # iterate through thread IDs, and grab data
 
-            # create db session
-            session = self.Session()
+            print("Getting {0}".format(thread))
 
-            print('Message found! {} RECEIVED {}'.format(message.message, message.created))
-            self.process_message(session, message)
+            # get post data, including comments
+            retdata = get_post_data(self.r, thread)
 
-            session.close()
+            # insert into database
+            post_id = insert_post_data(self.Session, retdata['thread_data'])
 
-    def process_message(self, session, message):
-        """
-        Processes a database message
-        :param message: a database message
-        :return: nothing?
-        """
+            # go through all comments and insert into database
+            for comment in retdata['comments']:
+                insert_comment_data(self.Session, comment, post_id)
 
-        # the types of messages currently supported
-        message_types = ['GET']
+            # build tblhistory entry
+            historymessage = 'Fetched post ID {0} with {1} comments'.format(retdata['thread_data']['id'], len(retdata['comments']))
+            print(historymessage)
 
-        # most messages are going to be something like "GET <thread id" so we split it to make it easier to process
-        #message_split = message.split()
-
-        # do any of the components match message_types? THIS ASSUMES TWO WORD MESSAGES FOR NOW
-        # TODO: Extend this to support multiple thread IDs
-
-        messageid = message.id
-
-        database.move_message(self.session, messageid)
-
+            # create history message and isnert
+            insert_history(self.Session, historymessage)
