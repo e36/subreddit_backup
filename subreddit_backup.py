@@ -2,7 +2,7 @@ import configparser
 from sessionhandler import SessionHandler
 
 # print intro
-print('***Subreddit Backup Bot***')
+print('***Subreddit Backup, by e36***')
 
 # get config data and save to global variables
 config = configparser.ConfigParser()

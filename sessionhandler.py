@@ -41,7 +41,6 @@ class SessionHandler:
         # build connection string
         # engine://user:pass@host/database
         connection_string = dbsettings['engine'] + "://" + dbsettings['username'] + ":" + dbsettings['password'] + "@" + dbsettings['hostname'] + ":" + dbsettings['port'] + "/" + dbsettings['dbname'] + "?charset=utf8"
-        print(connection_string)
 
         # create engine object
         engine = create_engine(connection_string)
@@ -69,8 +68,6 @@ class SessionHandler:
         for thread in threads:
             # iterate through thread IDs, and grab data
 
-            print("Getting {0}".format(thread))
-
             # get post data, including comments
             retdata = get_post_data(self.r, thread)
 
@@ -87,3 +84,6 @@ class SessionHandler:
 
             # create history message and isnert
             insert_history(self.Session, historymessage)
+
+            # just throw in a line return to space things out
+            print('\n')
