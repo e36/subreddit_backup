@@ -29,10 +29,22 @@ def get_post_data(reddit_session, thread_id):
 
     # get thread info and add to thread_list
     print('Getting thread information.')
-    thread_data = dict(created_utc=thread.created_utc, id=thread.id, name=thread.name, author=thread.author.name,
-                       domain=thread.domain, link_flair_text=thread.link_flair_text, num_comments=thread.num_comments,
+    thread_data = dict(created_utc=thread.created_utc, id=thread.id, name=thread.name, domain=thread.domain,
+                       link_flair_text=thread.link_flair_text, num_comments=thread.num_comments,
                        permalink=thread.permalink, score=thread.score, selftext=thread.selftext,
                        selftext_html=thread.selftext_html, title=thread.title, upvote_ratio=thread.upvote_ratio)
+
+    # test for author, because if the thread is deleted then the author will simply be none
+    if thread.author:
+        thread_data['author'] = thread.author
+    else:
+        thread_data['author'] = '[DELETED]'
+
+    # convert the archived value from True/False to 1/0
+    if thread.archived:
+        thread_data['archived'] = 1
+    else:
+        thread_data['archived'] = 0
 
     # iterate through comments and add them to comment list before adding to thread_list for json serialization
     print('Getting comment data.')
