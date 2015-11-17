@@ -100,6 +100,9 @@ class SessionHandler:
             history['message'] = 'Fetched post ID {0} with {1} comments'.format(retdata['thread_data']['id'], len(retdata['comments']))
             print(history['message'])
 
+            # set status for now, until I'm able to implement error handling
+            history['status'] = 'C'
+
             # create history message and isnert
             insert_history(self.Session, history)
 

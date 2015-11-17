@@ -18,7 +18,8 @@ def insert_history(Session, message):
     newhistory = History(
         message=message['message'],
         created=message['created'],
-        finished=message['finished']
+        finished=message['finished'],
+        status=message['status']
     )
 
     # add to session and commit
