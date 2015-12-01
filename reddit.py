@@ -8,27 +8,18 @@ def get_post_data(reddit_session, thread_id):
     :return: flat comments and post data
     """
 
-    # init containers where we will hold the thread info
-    all_data = dict()
+    # init containers where we will hold the thread info)
     thread_data = dict()
-    comment_list = []
-
-    # init the 'already done' set
-    already_done = set()
-
-    # get submission
-    thread = reddit_session.get_submission(submission_id=thread_id)
 
     # status stuff
     print('Getting thread ' + thread_id)
 
-    # get comments and flatten
-    thread.replace_more_comments(limit=None, threshold=1)
-    # comments = thread.comments
-    flat_comments = praw.helpers.flatten_tree(thread.comments)
-
     # get thread info and add to thread_list
     print('Getting thread information.')
+
+    # get submission
+    thread = reddit_session.get_submission(submission_id=thread_id)
+
     thread_data = dict(created_utc=thread.created_utc, id=thread.id, name=thread.name, domain=thread.domain,
                        link_flair_text=thread.link_flair_text, num_comments=thread.num_comments,
                        permalink=thread.permalink, score=thread.score, selftext=thread.selftext,
@@ -46,8 +37,35 @@ def get_post_data(reddit_session, thread_id):
     else:
         thread_data['archived'] = 0
 
-    # iterate through comments and add them to comment list before adding to thread_list for json serialization
+    # return
+    return thread_data
+
+
+def get_comments(reddit_session, thread_id):
+    """
+    Gets all comments for a particular thread_id
+    :param reddit_session: praw session for connecting to reddit
+    :param thread_id: the thread id (not name) to be captured
+    :return: A list of flat comment data
+    """
+
     print('Getting comment data.')
+
+    # init list of comment data to be returned
+    comment_list = []
+
+    # init the 'already done' set
+    already_done = set()
+
+    # get submission
+    thread = reddit_session.get_submission(submission_id=thread_id)
+
+    # get comments and flatten
+    thread.replace_more_comments(limit=None, threshold=1)
+    # comments = thread.comments
+    flat_comments = praw.helpers.flatten_tree(thread.comments)
+
+    # iterate through comments and add them to comment list before adding to thread_list for json serialization
     for comment in flat_comments:
 
         comment_dict = dict()
@@ -67,12 +85,8 @@ def get_post_data(reddit_session, thread_id):
             already_done.add(comment.id)
             comment_list.append(comment_dict)
 
-    # compile data
-    all_data['thread_data'] = thread_data
-    all_data['comments'] = comment_list
-
     # return
-    return all_data
+    return comment_list
 
 
 def get_posts(reddit_session, subreddit_name):
