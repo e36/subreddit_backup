@@ -180,7 +180,7 @@ def insert_post_data(Session, post_data):
         return p.id
 
 
-def insert_comment_data(Session, commentdata, post_id):
+def insert_comment_data(Session, commentdata, thread_id):
     """
     Inserts or updates one comment record.
     :param Session: sqlalchemy session
@@ -208,7 +208,7 @@ def insert_comment_data(Session, commentdata, post_id):
         session.commit()
     elif not hasattr(comment, 'id'):
         newcomment = Comment(
-            link_id=post_id,
+            link_id=thread_id,
             name=commentdata['name'],
             parent_id=commentdata['parent_id'],
             score=commentdata['score'],
@@ -223,3 +223,26 @@ def insert_comment_data(Session, commentdata, post_id):
         # add to session and commit
         session.add(newcomment)
         session.commit()
+
+
+def get_thread_skip_data_db(Session, thread_id):
+    """
+    Gets the thread data from the database.  Returns thread id, lastupdated, archived, numcomments
+    :param Session: sqlalchemy session
+    :param thread_id: thread ID for the thread
+    :return: list of dicts(thread_id,lastupdated,archived,num_comments)
+    """
+
+    # establish database session
+    session = Session()
+
+    # query the thread
+    thread = session.query(Post.thread_id, Post.num_comments, Post.lastchecked, Post.archived).filter(Post.thread_id == thread_id)
+
+    # insert into a dictionary if the query returned anything, or return 0
+    if hasattr(thread, 'thread_id'):
+        retdata = dict(thread_id=thread.thread_id, num_comments=thread.num_comments, lastchecked=thread.lastchecked, archived=thread.archived)
+    else:
+        retdata = False
+
+    return retdata
