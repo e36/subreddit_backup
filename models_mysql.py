@@ -1,6 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, backref
 
 Base = declarative_base()
 
@@ -24,10 +23,10 @@ class Post(Base):
     author = Column(String(50))
     domain = Column(Integer, ForeignKey('tblSubreddits.id'), nullable=False)
     score = Column(Integer, nullable=False)
-    num_comments = Column(Integer, nullable=False)
+    comments = Column(Integer, nullable=False)
     link_flair_text = Column(String(50))
     upvote_ratio = Column(Integer, nullable=False)
-    permalink = Column(String(200), nullable=False)
+    permalink = Column(String(250), nullable=False)
     selftext = Column(Text)
     selftext_html = Column(Text)
     archived = Column(Integer)
@@ -72,7 +71,7 @@ class History(Base):
     __tablename__ = 'tblHistory'
 
     id = Column(Integer, primary_key=True)
-    created = Column(DateTime)
-    finished = Column(DateTime)
-    message = Column(Text)
-    status = Column(String(10))
+    created = Column(DateTime, nullable=False)
+    finished = Column(DateTime, nullable=False)
+    message = Column(Text, nullable=False)
+    status = Column(String(10), nullable=False)

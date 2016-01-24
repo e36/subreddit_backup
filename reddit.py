@@ -1,9 +1,10 @@
 import praw
+from urllib import request
 
 
 def get_post_data(reddit_session, thread_id):
     """
-    Gets all comments and post data from a thread.
+    Gets only post data from a thread.
     :param thread_id: reddit thread ID
     :return: flat comments and post data
     """
@@ -21,7 +22,7 @@ def get_post_data(reddit_session, thread_id):
     thread = reddit_session.get_submission(submission_id=thread_id)
 
     thread_data = dict(created_utc=thread.created_utc, id=thread.id, name=thread.name, domain=thread.domain,
-                       link_flair_text=thread.link_flair_text, num_comments=thread.num_comments,
+                       link_flair_text=thread.link_flair_text, comments=thread.num_comments,
                        permalink=thread.permalink, score=thread.score, selftext=thread.selftext,
                        selftext_html=thread.selftext_html, title=thread.title, upvote_ratio=thread.upvote_ratio)
 
@@ -53,19 +54,29 @@ def get_comments(reddit_session, thread_id):
 
     # init list of comment data to be returned
     comment_list = []
+    retlist = dict()
 
     # init the 'already done' set
     already_done = set()
 
-    # get submission
-    thread = reddit_session.get_submission(submission_id=thread_id)
+    try:
+        # get submission
+        thread = reddit_session.get_submission(submission_id=thread_id)
 
-    # get comments and flatten
-    thread.replace_more_comments(limit=None, threshold=1)
-    # comments = thread.comments
-    flat_comments = praw.helpers.flatten_tree(thread.comments)
+        # get comments and flatten
+        thread.replace_more_comments(limit=None, threshold=1)
 
-    # iterate through comments and add them to comment list before adding to thread_list for json serialization
+        # comments = thread.comments
+        flat_comments = praw.helpers.flatten_tree(thread.comments)
+    except request.HTTPError:
+        # HTTPError
+        retlist = dict(
+            status='F',
+            thread=thread_id,
+            errormsg='HTTPError'
+        )
+
+    # iterate through comments and add them to comment list before adding to thread_list
     for comment in flat_comments:
 
         comment_dict = dict()
@@ -85,8 +96,15 @@ def get_comments(reddit_session, thread_id):
             already_done.add(comment.id)
             comment_list.append(comment_dict)
 
+    # build success message
+    retlist= dict(
+        status='C',
+        thread=thread_id,
+        comments=comment_list
+    )
+
     # return
-    return comment_list
+    return retlist
 
 
 def get_posts(reddit_session, subreddit_name):

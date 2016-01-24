@@ -3,13 +3,14 @@ from sqlalchemy.orm import sessionmaker
 import praw
 import OAuth2Util
 from reddit import get_post_data, get_posts, get_comments
-from database import insert_comment_data, insert_history, insert_post_data, get_thread_skip_data_db
+from database import insert_comment_data, insert_history, insert_post_data, get_post_data_from_db
+from database import check_post_table, check_comment_table
 from datetime import datetime
 
 
 class SessionHandler:
 
-    def __init__(self, databasesettings, settings):
+    def __init__(self, databasesettings, settings, dbonly=False):
 
         # grab config settings
         self.settings = settings
@@ -24,11 +25,12 @@ class SessionHandler:
         # create a sql alchemy session
         self.Session = sessionmaker(bind=self.engine)
 
-        # create praw instance
+        # create praw instance, but only if dbonly is False
         # init praw and OAuth2Util things
-        self.r = praw.Reddit(user_agent='Subreddit parsing script by u/e36')
-        self.o = OAuth2Util.OAuth2Util(self.r)
-        self.o.refresh()
+        if not dbonly:
+            self.r = praw.Reddit(user_agent='Subreddit parsing script by u/e36')
+            self.o = OAuth2Util.OAuth2Util(self.r)
+            self.o.refresh()
 
     def connect_to_db(self):
 
@@ -72,6 +74,8 @@ class SessionHandler:
         threads = []
         threads = get_posts(self.r, self.settings['defaultsubreddit'])
 
+        # threads = ['42e77i']
+
         for thread in threads:
             # iterate through thread IDs, and grab data
 
@@ -91,11 +95,11 @@ class SessionHandler:
             retdata = get_post_data(self.r, thread)
 
             # get post data from database
-            dbdata = get_thread_skip_data_db(self.Session, thread)
+            dbdata = get_post_data_from_db(self.Session, thread)
 
             # package the data for skip_logic
             package = dict()
-            package['reddit'] = dict(thread_id=retdata['id'], num_comments=retdata['num_comments'], archived=retdata['archived'])
+            package['reddit'] = dict(thread_id=retdata['id'], comments=retdata['comments'], archived=retdata['archived'])
             package['database'] = dbdata
 
             # if the database doesn't contain a record for the post, it will return false
@@ -109,43 +113,56 @@ class SessionHandler:
                 # don't skip the post
 
                 # get comments
-                comments = []
-                comments = get_comments(self.r, thread)
+                data = dict()
+                data = get_comments(self.r, thread)
 
-                # insert into database
-                post_id = insert_post_data(self.Session, retdata)
+                # if data['status'] == 'C' then the retrieval was successful, so proceed
+                if data['status'] == 'C':
+                    # insert into database
+                    post_id = insert_post_data(self.Session, retdata)
 
-                # go through all comments and insert into database
-                for comment in comments:
-                    insert_comment_data(self.Session, comment, post_id)
+                    # go through all comments and insert into database
+                    for comment in data['comments']:
+                        insert_comment_data(self.Session, comment, post_id)
 
-                # get finished time for tblHistory
-                history['finished'] = datetime.utcnow()
+                    # get finished time for tblHistory
+                    history['finished'] = datetime.utcnow()
 
-                # build tblhistory entry
-                history['message'] = 'Fetched post ID {0} with {1} comments'.format(retdata['id'], len(comments))
-                print(history['message'])
+                    # build tblhistory entry
+                    history['message'] = 'Fetched post ID {0} with {1} comments'.format(retdata['id'], len(data['comments']))
+                    print(history['message'])
 
-                # set status for now, until I'm able to implement error handling
-                history['status'] = 'C'
+                    # set status for now, until I'm able to implement error handling
+                    history['status'] = 'C'
 
-                # create history message and isnert
-                insert_history(self.Session, history)
+                else:
+                    # the thread is being skipped
+                    print('skipping thread {0}'.format(retdata['thread_data']['id']))
 
-                # just throw in a line return to space things out
-                print('\n')
+                    # build tblhistory message
+                    status = 'S'
+                    finished = datetime.utcnow()
+                    message = 'Skipped post {0}'.format(retdata['id'])
+                    history = dict(status=status, finished=finished, message=message)
             else:
-                # the thread is being skipped
-                print('skipping thread {0}'.format(retdata['thread_data']['id']))
+                # data['status'] == 'F' so we build the message and send to insert_history
+                history = dict(
+                    status=data['status'],
+                    finished=datetime.utcnow(),
+                    message=data['thread'] + ' failed due to ' + data['errormsg']
+                )
 
-                # build tblhistory message
-                status = 'S'
-                finished = datetime.utcnow()
-                message = 'Skipped post {0}'.format(retdata['id'])
-                history = dict(status=status, finished=finished, message=message)
+            # insert message
+            insert_history(self.Session, history)
 
-                # insert message
-                insert_history(self.Session, history)
+    def get_reddit_post(self, thread_id):
+        """
+        Gets the reddit post by thread id
+        :param thread_id: thread is (e.g. '4108ez')
+        :return: nothing
+        """
+
+        pass
 
     def skip_logic(self, package):
         """
@@ -162,4 +179,30 @@ class SessionHandler:
             return True
         else:
             return False
+
+    def check_post_table(self, thread_id):
+        """
+        Checks the table for a post
+        :param thread_id: thread id (e.g. 'cghs2')
+        :return: db ID or None
+        """
+
+        # print("Searching db for " + thread_id)
+
+        a = check_post_table(self.Session, thread_id)
+
+        # print("Result {0}".format(a))
+
+    def check_comment_table(self, comment_id):
+        """
+        Checks the table for a post
+        :param comment_id: thread id (e.g. 't1_s72x7')
+        :return: db ID or None
+        """
+
+        print("Searching db for " + comment_id)
+
+        a = check_comment_table(self.Session, comment_id)
+
+        print("Result {0}".format(a))
 

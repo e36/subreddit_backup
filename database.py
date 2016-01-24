@@ -143,9 +143,10 @@ def insert_post_data(Session, post_data):
         post.score = post_data['score']
         post.upvote_ratio = post_data['upvote_ratio']
         post.link_flair_text = post_data['link_flair_text']
-        post.num_comments = post_data['num_comments']
+        post.comments = post_data['comments']
         post.lastchecked = datetime.utcnow()
         post.lastmodified = datetime.utcnow()
+        post.archived = post_data['archived']
 
         session.add(post)
         session.commit()
@@ -163,14 +164,15 @@ def insert_post_data(Session, post_data):
             author=post_data['author'],
             domain=domain,
             score=post_data['score'],
-            num_comments=post_data['num_comments'],
+            comments=post_data['comments'],
             link_flair_text=post_data['link_flair_text'],
             upvote_ratio=post_data['upvote_ratio'],
             permalink=post_data['permalink'],
             selftext=post_data['selftext'],
             selftext_html=post_data['selftext_html'],
             lastchecked=datetime.utcnow(),
-            lastmodified=datetime.utcnow()
+            lastmodified=datetime.utcnow(),
+            archived=post_data['archived']
         )
 
         # add to session
@@ -193,7 +195,7 @@ def insert_comment_data(Session, commentdata, thread_id):
     session = Session()
 
     # run query to see if the comment already exists
-    comment = session.query(Comment).filter(Comment.id == commentdata['link_id']).first()
+    comment = session.query(Comment).filter(Comment.name == commentdata['name']).first()
 
     if hasattr(comment, 'id'):
         # comment exists, so just update (don't update the author in case they delete
@@ -225,7 +227,18 @@ def insert_comment_data(Session, commentdata, thread_id):
         session.commit()
 
 
-def get_thread_skip_data_db(Session, thread_id):
+def update_comment(Session, comment_data):
+    """
+    Updates a comment row.  Be sure to send all comment data, since there is no logic to determine what was updated.
+    :param Session: sql alchemy session
+    :param comment_data: a dict of all comment data
+    :return:
+    """
+
+    session = Session()
+
+
+def get_post_data_from_db(Session, thread_id):
     """
     Gets the thread data from the database.  Returns thread id, lastupdated, archived, numcomments
     :param Session: sqlalchemy session
@@ -237,12 +250,48 @@ def get_thread_skip_data_db(Session, thread_id):
     session = Session()
 
     # query the thread
-    thread = session.query(Post.thread_id, Post.num_comments, Post.lastchecked, Post.archived).filter(Post.thread_id == thread_id)
+    thread = session.query(Post.thread_id, Post.comments, Post.lastchecked, Post.archived).filter(Post.thread_id == thread_id)
 
     # insert into a dictionary if the query returned anything, or return 0
     if hasattr(thread, 'thread_id'):
-        retdata = dict(thread_id=thread.thread_id, num_comments=thread.num_comments, lastchecked=thread.lastchecked, archived=thread.archived)
+        retdata = dict(thread_id=thread.thread_id, comments=thread.comments, lastchecked=thread.lastchecked, archived=thread.archived)
     else:
         retdata = False
 
     return retdata
+
+
+def check_post_table(Session, thread_id):
+    """
+    Checks the db to see if the thread is already in there.  IF it exists, then return the row number.  If not,
+    return None
+    :param Session: SQL Alchemy session
+    :param thread_id: thread id (e.g. 'cxs83s')
+    :return: db ID or None
+    """
+
+    # establish session
+    session = Session()
+
+    # query the db
+    thread = session.query(Post.id).filter(Post.thread_id == thread_id).scalar()
+
+    return thread
+
+
+def check_comment_table(Session, comment_id):
+    """
+    Checks the db to see if the comment is already in there.  IF it exists, then return the row number.  If not,
+    return None
+    :param Session: SQL Alchemy session
+    :param comment_id: comment id (e.g. 't1_cxs83s')
+    :return: db ID or None
+    """
+
+    # establish session
+    session = Session()
+
+    # query the db
+    comment = session.query(Comment.id).filter(Comment.name == comment_id).scalar()
+
+    return comment
