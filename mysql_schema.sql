@@ -2,7 +2,7 @@
 -- Host:                         127.0.0.1
 -- Server version:               5.6.17 - MySQL Community Server (GPL)
 -- Server OS:                    Win64
--- HeidiSQL Version:             9.3.0.4998
+-- HeidiSQL Version:             9.3.0.5019
 -- --------------------------------------------------------
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS `tblcomments` (
   `score` int(11) NOT NULL,
   `created_utc` varchar(50) NOT NULL,
   `author` varchar(50) NOT NULL,
-  `body` text NOT NULL,
-  `body_html` text NOT NULL,
+  `body` text,
+  `body_html` text,
   `lastchecked` datetime NOT NULL,
   `lastmodified` datetime NOT NULL,
   PRIMARY KEY (`id`),
@@ -41,7 +41,8 @@ CREATE TABLE IF NOT EXISTS `tblhistory` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `created` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   `finished` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
-  `message` varchar(250) NOT NULL DEFAULT '0',
+  `message` text NOT NULL,
+  `status` varchar(10) NOT NULL DEFAULT '"C"',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
@@ -77,18 +78,19 @@ CREATE TABLE IF NOT EXISTS `tblposts` (
   `thread_id` varchar(50) NOT NULL,
   `created_utc` varchar(50) NOT NULL,
   `name` varchar(50) NOT NULL,
-  `title` text NOT NULL,
-  `author` varchar(50) NOT NULL,
+  `title` text,
+  `author` varchar(50) DEFAULT NULL,
   `domain` int(11) NOT NULL,
   `score` int(11) NOT NULL,
   `num_comments` int(11) NOT NULL,
   `link_flair_text` varchar(50) DEFAULT NULL,
   `upvote_ratio` int(11) NOT NULL,
   `permalink` varchar(200) NOT NULL,
-  `selftext` text NOT NULL,
-  `selftext_html` text NOT NULL,
+  `selftext` text,
+  `selftext_html` text,
   `lastchecked` datetime NOT NULL,
   `lastmodified` datetime NOT NULL,
+  `archived` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `domain` (`domain`),
   CONSTRAINT `tblposts_ibfk_1` FOREIGN KEY (`domain`) REFERENCES `tblsubreddits` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
