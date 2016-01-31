@@ -45,7 +45,7 @@ class SessionHandler:
 
         # build connection string
         # engine://user:pass@host/database
-        connection_string = dbsettings['engine'] + "://" + dbsettings['username'] + ":" + dbsettings['password'] + "@" + dbsettings['hostname'] + ":" + dbsettings['port'] + "/" + dbsettings['dbname'] + "?charset=utf8"
+        connection_string = dbsettings['engine'] + "+mysqlconnector://" + dbsettings['username'] + ":" + dbsettings['password'] + "@" + dbsettings['hostname'] + ":" + dbsettings['port'] + "/" + dbsettings['dbname'] + "?charset=utf8mb4"
 
         # create engine object
         engine = create_engine(connection_string)

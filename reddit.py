@@ -28,7 +28,7 @@ def get_post_data(reddit_session, thread_id):
 
     # test for author, because if the thread is deleted then the author will simply be none
     if thread.author:
-        thread_data['author'] = thread.author
+        thread_data['author'] = thread.author.name
     else:
         thread_data['author'] = '[DELETED]'
 
@@ -64,7 +64,7 @@ def get_comments(reddit_session, thread_id):
         thread = reddit_session.get_submission(submission_id=thread_id)
 
         # get comments and flatten
-        thread.replace_more_comments(limit=None, threshold=1)
+        thread.replace_more_comments(limit=None)
 
         # comments = thread.comments
         flat_comments = praw.helpers.flatten_tree(thread.comments)
