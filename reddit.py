@@ -74,7 +74,9 @@ def get_comments(reddit_session, thread_id):
             status='F',
             thread=thread_id,
             errormsg='HTTPError'
+
         )
+        return retlist
 
     # iterate through comments and add them to comment list before adding to thread_list
     for comment in flat_comments:

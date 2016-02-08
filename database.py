@@ -2,6 +2,7 @@ from sqlalchemy import update, MetaData, Table, Column, Integer, String, Foreign
 from sqlalchemy.sql import select, insert, update
 from datetime import datetime
 from models_mysql import MessageLog, Message, Post, Subreddit, Comment, History
+from collections import namedtuple
 
 
 def insert_history(Session, message):
@@ -227,6 +228,40 @@ def insert_comment_data(Session, commentdata, thread_id):
         session.commit()
 
 
+def bulk_comment_insert(Session, commentdata, thread_id):
+    """
+    Bulk insert of multiple comments into the database for a given thread id (e.g. 117 not ew38xn)
+    :param Session: sql alchemy session
+    :param commentdata: list of comment dictionaries
+    :param thread_id: thread id (e.g. 117 not ew38xn)
+    :return:
+    """
+
+    # init db session
+    session = Session()
+
+    # iterate through all comments and add them to the session
+    for comment in commentdata:
+        newcomment = Comment(
+                link_id=thread_id,
+                name=comment['name'],
+                parent_id=comment['parent_id'],
+                score=comment['score'],
+                created_utc=comment['created_utc'],
+                author=comment['author'],
+                body=comment['body'],
+                body_html=comment['body_html'],
+                lastchecked=datetime.utcnow(),
+                lastmodified=datetime.utcnow()
+        )
+
+        # add to session and commit
+        session.add(newcomment)
+
+    # commit all changes
+    session.commit()
+
+
 def update_comment(Session, comment_data):
     """
     Updates a comment row.  Be sure to send all comment data, since there is no logic to determine what was updated.
@@ -295,3 +330,25 @@ def check_comment_table(Session, comment_id):
     comment = session.query(Comment.id).filter(Comment.name == comment_id).scalar()
 
     return comment
+
+
+def get_comment_keys(Session, thread_id):
+    """
+    Returns a list of [row, name] for all comments under thread_id
+    :param Session: sqlalchemy session
+    :param thread_id: valid thread/post row id (e.g. 12, 567) NOT the reddit post id
+    :return: a list of all comment [row, name]
+    """
+
+    session = Session()
+
+    # init list to be returned
+    retlist = []
+
+    # init named tuple
+    element = namedtuple('element', 'id, name')
+
+    for q in session.query(Comment.id, Comment.name).filter(Comment.link_id == thread_id):
+        retlist.append(element(q.id, q.name))
+
+    return retlist

@@ -4,7 +4,7 @@ import praw
 import OAuth2Util
 from reddit import get_post_data, get_posts, get_comments
 from database import insert_comment_data, insert_history, insert_post_data, get_post_data_from_db
-from database import check_post_table, check_comment_table
+from database import check_post_table, check_comment_table, get_comment_keys, bulk_comment_insert
 from datetime import datetime
 
 
@@ -71,7 +71,6 @@ class SessionHandler:
         self.o.refresh()
 
         # get all available threads via praw
-        threads = []
         threads = get_posts(self.r, self.settings['defaultsubreddit'])
 
         # threads = ['42e77i']
@@ -95,56 +94,46 @@ class SessionHandler:
             retdata = get_post_data(self.r, thread)
 
             # get post data from database
-            dbdata = get_post_data_from_db(self.Session, thread)
+            # dbdata = get_post_data_from_db(self.Session, thread)
 
             # package the data for skip_logic
-            package = dict()
-            package['reddit'] = dict(thread_id=retdata['id'], comments=retdata['comments'], archived=retdata['archived'])
-            package['database'] = dbdata
+            # package = dict()
+            # package['reddit'] = dict(thread_id=retdata['id'], comments=retdata['comments'], archived=retdata['archived'])
+            # package['database'] = dbdata
 
             # if the database doesn't contain a record for the post, it will return false
             # if that happens then we don't want to run it through the skip logic
-            if hasattr(dbdata, 'thread_id'):
-                # run through the skip logic
-                skip = self.skip_logic(package)
 
-            # see if the post exists in the database already
-            if not skip:
-                # don't skip the post
+            # get comments for post from reddit
+            data = get_comments(self.r, thread)
 
-                # get comments
-                data = dict()
-                data = get_comments(self.r, thread)
+            # if data['status'] == 'C' then the retrieval was successful, so proceed
+            if data['status'] == 'C':
 
-                # if data['status'] == 'C' then the retrieval was successful, so proceed
-                if data['status'] == 'C':
-                    # insert into database
+                # query the database to see if the post already exists, will either get ID or None
+                post_id = check_post_table(self.Session, thread)
+
+                # if the post does not exist (no id returned) then insert the post data into db
+                # you can do bulk_comment_insert on everything because this is all new data
+                if not post_id:
                     post_id = insert_post_data(self.Session, retdata)
-
+                    bulk_comment_insert(self.Session, data['comments'], post_id)
+                else:
                     # go through all comments and insert into database
                     for comment in data['comments']:
                         insert_comment_data(self.Session, comment, post_id)
 
-                    # get finished time for tblHistory
-                    history['finished'] = datetime.utcnow()
+                # get finished time for tblHistory
+                history['finished'] = datetime.utcnow()
 
-                    # build tblhistory entry
-                    history['message'] = 'Fetched post ID {0} with {1} comments'.format(retdata['id'], len(data['comments']))
-                    print(history['message'])
+                # build tblhistory entry
+                history['message'] = 'Fetched post ID {0} with {1} comments'.format(retdata['id'], len(data['comments']))
+                print(history['message'])
 
-                    # set status for now, until I'm able to implement error handling
-                    history['status'] = 'C'
+                # set status for now, until I'm able to implement error handling
+                history['status'] = 'C'
 
-                else:
-                    # the thread is being skipped
-                    print('skipping thread {0}'.format(retdata['thread_data']['id']))
-
-                    # build tblhistory message
-                    status = 'S'
-                    finished = datetime.utcnow()
-                    message = 'Skipped post {0}'.format(retdata['id'])
-                    history = dict(status=status, finished=finished, message=message)
-            else:
+            elif data['status'] == 'F':
                 # data['status'] == 'F' so we build the message and send to insert_history
                 history = dict(
                     status=data['status'],
@@ -154,6 +143,8 @@ class SessionHandler:
 
             # insert message
             insert_history(self.Session, history)
+
+            print("\n")
 
     def get_reddit_post(self, thread_id):
         """
@@ -205,4 +196,12 @@ class SessionHandler:
         a = check_comment_table(self.Session, comment_id)
 
         print("Result {0}".format(a))
+
+    def get_comment_keys(self, thread_id):
+
+        retlist = []
+
+        retlist = get_comment_keys(self.Session, thread_id)
+
+        return retlist
 
