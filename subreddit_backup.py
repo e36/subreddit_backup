@@ -9,9 +9,10 @@ config = configparser.ConfigParser()
 config.read('config.dat')
 DATABASE = config['database']
 SETTINGS = config['settings']
+REDIS = config['redis']
 
 # create bot, connect to database
-backend = SessionHandler(DATABASE, SETTINGS)
+backend = SessionHandler(DATABASE, SETTINGS, REDIS)
 
 # start the backend
 backend.start()

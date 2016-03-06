@@ -6,15 +6,18 @@ from reddit import get_post_data, get_posts, get_comments
 from database import insert_comment_data, insert_history, insert_post_data, get_post_data_from_db
 from database import check_post_table, check_comment_table, get_comment_keys, bulk_comment_insert
 from datetime import datetime
+from redis import RedisHandler
+import time
 
 
 class SessionHandler:
 
-    def __init__(self, databasesettings, settings, dbonly=False):
+    def __init__(self, databasesettings, settings, redissettings, dbonly=False):
 
         # grab config settings
         self.settings = settings
         self.dbsettings = databasesettings
+        self.rsettings = redissettings
 
         # other state settings to worry about
         self.isrunning = False  # used to start or stop the backend
@@ -24,6 +27,9 @@ class SessionHandler:
 
         # create a sql alchemy session
         self.Session = sessionmaker(bind=self.engine)
+
+        # connect to redis instance
+        self.redis = RedisHandler(self.rsettings)
 
         # create praw instance, but only if dbonly is False
         # init praw and OAuth2Util things
@@ -59,13 +65,8 @@ class SessionHandler:
         """
 
         print("Starting the backup process.")
-        self.grab_data()
 
-    def grab_data(self):
-        """
-        Gets posts, inserts/updates the database, inserts history entry
-        :return: nothing
-        """
+        print('Getting thread IDs from reddit.')
 
         # refresh oauth tokens
         self.o.refresh()
@@ -73,78 +74,114 @@ class SessionHandler:
         # get all available threads via praw
         threads = get_posts(self.r, self.settings['defaultsubreddit'])
 
+        # only add to the redis queue if something is returned
+        if threads:
+            self.redis.add_to_list(threads)
+
+        queueitems = self.redis.get_list_size()
+
+        # run this until the queue is empty
+        while queueitems:
+
+            # get the next thread from the queue
+            nexitem = self.redis.get_next()
+
+
+            try:
+                # work the thread
+                self.grab_data(nexitem)
+            except praw.errors.HTTPException:
+                print('HTTPException! Reddit must be down.')
+                print('Waiting 2 minutes before continuing.')
+
+                # push the thread id back onto the front of the queue
+                self.redis.lpush(nexitem)
+
+                # sleep for a bit
+                time.sleep(120)
+
+                continue
+
+
+        print('Done.')
+
+
+
+    def grab_data(self, thread_id):
+        """
+        Gets posts, inserts/updates the database, inserts history entry
+        :return: nothing
+        """
+
         # threads = ['42e77i']
 
-        for thread in threads:
-            # iterate through thread IDs, and grab data
+        # init skip variable, should be false by default
+        skip = False
 
-            # init skip variable, should be false by default
-            skip = False
+        # empty tblHistory dict
+        history = dict()
 
-            # empty tblHistory dict
-            history = dict()
+        # get created datetime for tblHistory
+        history['created'] = datetime.utcnow()
 
-            # get created datetime for tblHistory
-            history['created'] = datetime.utcnow()
+        # make sure oauth tokens are good, since grabbing threads can take a while
+        self.o.refresh()
 
-            # make sure oauth tokens are good, since grabbing threads can take a while
-            self.o.refresh()
+        # get post data from reddit
+        retdata = get_post_data(self.r, thread_id)
 
-            # get post data from reddit
-            retdata = get_post_data(self.r, thread)
+        # get post data from database
+        # dbdata = get_post_data_from_db(self.Session, thread)
 
-            # get post data from database
-            # dbdata = get_post_data_from_db(self.Session, thread)
+        # package the data for skip_logic
+        # package = dict()
+        # package['reddit'] = dict(thread_id=retdata['id'], comments=retdata['comments'], archived=retdata['archived'])
+        # package['database'] = dbdata
 
-            # package the data for skip_logic
-            # package = dict()
-            # package['reddit'] = dict(thread_id=retdata['id'], comments=retdata['comments'], archived=retdata['archived'])
-            # package['database'] = dbdata
+        # if the database doesn't contain a record for the post, it will return false
+        # if that happens then we don't want to run it through the skip logic
 
-            # if the database doesn't contain a record for the post, it will return false
-            # if that happens then we don't want to run it through the skip logic
+        # get comments for post from reddit
+        data = get_comments(self.r, thread_id)
 
-            # get comments for post from reddit
-            data = get_comments(self.r, thread)
+        # if data['status'] == 'C' then the retrieval was successful, so proceed
+        if data['status'] == 'C':
 
-            # if data['status'] == 'C' then the retrieval was successful, so proceed
-            if data['status'] == 'C':
+            # query the database to see if the post already exists, will either get ID or None
+            post_id = check_post_table(self.Session, thread_id)
 
-                # query the database to see if the post already exists, will either get ID or None
-                post_id = check_post_table(self.Session, thread)
+            # if the post does not exist (no id returned) then insert the post data into db
+            # you can do bulk_comment_insert on everything because this is all new data
+            if not post_id:
+                post_id = insert_post_data(self.Session, retdata)
+                bulk_comment_insert(self.Session, data['comments'], post_id)
+            else:
+                # go through all comments and insert into database
+                for comment in data['comments']:
+                    insert_comment_data(self.Session, comment, post_id)
 
-                # if the post does not exist (no id returned) then insert the post data into db
-                # you can do bulk_comment_insert on everything because this is all new data
-                if not post_id:
-                    post_id = insert_post_data(self.Session, retdata)
-                    bulk_comment_insert(self.Session, data['comments'], post_id)
-                else:
-                    # go through all comments and insert into database
-                    for comment in data['comments']:
-                        insert_comment_data(self.Session, comment, post_id)
+            # get finished time for tblHistory
+            history['finished'] = datetime.utcnow()
 
-                # get finished time for tblHistory
-                history['finished'] = datetime.utcnow()
+            # build tblhistory entry
+            history['message'] = 'Fetched post ID {0} with {1} comments'.format(retdata['id'], len(data['comments']))
+            print(history['message'])
 
-                # build tblhistory entry
-                history['message'] = 'Fetched post ID {0} with {1} comments'.format(retdata['id'], len(data['comments']))
-                print(history['message'])
+            # set status for now, until I'm able to implement error handling
+            history['status'] = 'C'
 
-                # set status for now, until I'm able to implement error handling
-                history['status'] = 'C'
+        elif data['status'] == 'F':
+            # data['status'] == 'F' so we build the message and send to insert_history
+            history = dict(
+                status=data['status'],
+                finished=datetime.utcnow(),
+                message=data['thread'] + ' failed due to ' + data['errormsg']
+            )
 
-            elif data['status'] == 'F':
-                # data['status'] == 'F' so we build the message and send to insert_history
-                history = dict(
-                    status=data['status'],
-                    finished=datetime.utcnow(),
-                    message=data['thread'] + ' failed due to ' + data['errormsg']
-                )
+        # insert message
+        insert_history(self.Session, history)
 
-            # insert message
-            insert_history(self.Session, history)
-
-            print("\n")
+        print("\n")
 
     def get_reddit_post(self, thread_id):
         """
