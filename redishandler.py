@@ -27,12 +27,15 @@ class RedisHandler:
         # pop the next item off the front of the list
         item = self.r.lpop(self.joblist)
 
+        # gotta decode the bytes
+        ritem = item.decode('utf-8')
+
         # if nothing comes out of the list, then it's empty and return 0
         # otherwise return whatever is next
         if not item:
             return 0
         else:
-            return item
+            return ritem
 
 
     def add_to_queue(self, items):

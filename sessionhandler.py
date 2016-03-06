@@ -72,13 +72,19 @@ class SessionHandler:
         # refresh oauth tokens
         self.o.refresh()
 
-        # get all available threads via praw
-        threads = get_posts(self.r, self.settings['defaultsubreddit'])
+        # check queue size before grabbing any more
+        queueitems = self.redis.get_list_size()
 
-        # only add to the redis queue if something is returned
-        if threads:
-            self.redis.add_to_queue(threads)
+        # if there aren't any items already in the queue, then get them
+        if not queueitems:
+            # get all available threads via praw
+            threads = get_posts(self.r, self.settings['defaultsubreddit'])
 
+            # only add to the redis queue if something is returned
+            if threads:
+                self.redis.add_to_queue(threads)
+
+        # get the queue size one more time
         queueitems = self.redis.get_list_size()
 
         # run this until the queue is empty
