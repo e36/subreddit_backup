@@ -6,7 +6,8 @@ from reddit import get_post_data, get_posts, get_comments
 from database import insert_comment_data, insert_history, insert_post_data, get_post_data_from_db
 from database import check_post_table, check_comment_table, get_comment_keys, bulk_comment_insert
 from datetime import datetime
-from redis import RedisHandler
+from redishandler import RedisHandler
+import redis
 import time
 
 
