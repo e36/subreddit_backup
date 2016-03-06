@@ -77,7 +77,7 @@ class SessionHandler:
 
         # only add to the redis queue if something is returned
         if threads:
-            self.redis.add_to_list(threads)
+            self.redis.add_to_queue(threads)
 
         queueitems = self.redis.get_list_size()
 
