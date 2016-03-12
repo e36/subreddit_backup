@@ -67,8 +67,6 @@ class SessionHandler:
 
         print("Starting the backup process.")
 
-        print('Getting thread IDs from reddit.')
-
         # refresh oauth tokens
         self.o.refresh()
 
@@ -77,6 +75,8 @@ class SessionHandler:
 
         # if there aren't any items already in the queue, then get them
         if not queueitems:
+            print('Getting thread IDs from reddit.\n')
+
             # get all available threads via praw
             threads = get_posts(self.r, self.settings['defaultsubreddit'])
 
@@ -97,9 +97,12 @@ class SessionHandler:
             try:
                 # work the thread
                 self.grab_data(nexitem)
+
             except praw.errors.HTTPException:
+                # This is meant to catch timeouts for when reddit is down or unresponsive
+
                 print('HTTPException! Reddit must be down.')
-                print('Waiting 2 minutes before continuing.')
+                print('Waiting 2 minutes before continuing.\n')
 
                 # push the thread id back onto the front of the queue
                 self.redis.lpush(nexitem)
@@ -108,6 +111,19 @@ class SessionHandler:
                 time.sleep(120)
 
                 continue
+
+            except TypeError:
+                # TypeError: getresponse() got an unexpected keyword argument 'buffering'
+
+                print("TypeError!  I don't know what the fuck this is, so we're gonna reset and try again.\n")
+
+                # push the current item back into the queue
+                self.redis.lpush(nexitem)
+
+                time.sleep(60)
+
+                continue
+
 
 
         print('Done.')
