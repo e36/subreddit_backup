@@ -112,7 +112,7 @@ class SessionHandler:
 
                 continue
 
-            except TypeError:
+            except:
                 # TypeError: getresponse() got an unexpected keyword argument 'buffering'
 
                 print("TypeError!  I don't know what the fuck this is, so we're gonna reset and try again.\n")
