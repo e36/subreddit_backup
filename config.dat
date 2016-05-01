@@ -2,9 +2,14 @@
 engine=mysql
 hostname=localhost
 port=3306
-dbname=pythontest
-username=pythontest
-password=test
+dbname=iama_test
+username=iamabackup_test
+password=password
 
 [settings]
 defaultsubreddit=IAmA
+
+[redis]
+hostname=192.168.1.208
+port=6379
+joblistname=iamajobs_test
