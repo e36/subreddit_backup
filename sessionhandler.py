@@ -112,17 +112,17 @@ class SessionHandler:
 
                 continue
 
-            except:
+            # except:
                 # TypeError: getresponse() got an unexpected keyword argument 'buffering'
 
-                print("TypeError!  I don't know what the fuck this is, so we're gonna reset and try again.\n")
+                # print("TypeError!  I don't know what the fuck this is, so we're gonna reset and try again.\n")
 
                 # push the current item back into the queue
-                self.redis.lpush(nexitem)
+                # self.redis.lpush(nexitem)
 
-                time.sleep(60)
+                # time.sleep(60)
 
-                continue
+                # continue
 
 
 
